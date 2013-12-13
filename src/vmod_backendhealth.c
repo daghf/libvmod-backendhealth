@@ -23,6 +23,8 @@ wsstrncat(char *dest, const char *src, unsigned max_sz) {
 	return strcat(dest, src);
 }
 
+/* This lets us cat to a ws-allocated string and just abandon if we run
+   out of space. */
 #define STRCAT(dst, src, max) \
 	dst = wsstrncat(dst, src, max);			\
 	if (!dst) {					\
@@ -47,8 +49,7 @@ vmod_json(struct sess *sp)
 		CHECK_OBJ_NOTNULL(sp->vcl->director[i], DIRECTOR_MAGIC);
 		if (strcmp("simple", sp->vcl->director[i]->name) == 0) {
 			char buf[1024];
-			int j;
-			int healthy;
+			int j, healthy;
 
 			healthy = VDI_Healthy(sp->vcl->director[i], sp);
 			j = snprintf(buf, sizeof buf, "    \"%s\": \"%s\"%s\n",
