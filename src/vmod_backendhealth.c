@@ -38,7 +38,7 @@ vmod_json(struct sess *sp)
 	char *p;
 	unsigned max_sz;
 	unsigned sz;
-	int i;
+	int i, first = 1;
 
 	max_sz = WS_Reserve(sp->wrk->ws, 0);
 	p = sp->wrk->ws->f;
@@ -51,17 +51,20 @@ vmod_json(struct sess *sp)
 			char buf[1024];
 			int j, healthy;
 
+			if (!first)
+				STRCAT(p, ",\n", max_sz);
+			first = 0;
+			
 			healthy = VDI_Healthy(sp->vcl->director[i], sp);
-			j = snprintf(buf, sizeof buf, "    \"%s\": \"%s\"%s\n",
-			    sp->vcl->director[i]->vcl_name, healthy ? "healthy" : "sick",
-			    (i == sp->vcl->ndirector - 1) ? "" : "," );
+			j = snprintf(buf, sizeof buf, "    \"%s\": \"%s\"",
+			    sp->vcl->director[i]->vcl_name, healthy ? "healthy" : "sick");
 			assert(j >= 0);
 
 			STRCAT(p, buf, max_sz);
 		}
 	}
 
-	STRCAT(p, "}\n", max_sz);
+	STRCAT(p, "\n}\n", max_sz);
 	
 	WS_Release(sp->wrk->ws, strlen(p));
 	return (p);
