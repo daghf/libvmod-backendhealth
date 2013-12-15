@@ -25,11 +25,14 @@ wsstrncat(char *dest, const char *src, unsigned max_sz) {
 
 /* This lets us cat to a ws-allocated string and just abandon if we run
    out of space. */
-#define STRCAT(dst, src, max) \
-	dst = wsstrncat(dst, src, max);			\
-	if (!dst) {					\
-		WS_Release(sp->wrk->ws, 0);		\
-		return "";				\
+#define STRCAT(dst, src, max)						\
+	dst = wsstrncat(dst, src, max);					\
+	if (!dst) {							\
+		WS_Release(sp->wrk->ws, 0);				\
+		WSL(sp->wrk, SLT_Error, sp->fd,				\
+		    "Running out of workspace in vmod_backendhealth. "	\
+		    "Increase sess_workspace to fix this.");		\
+		return "";						\
 	}						
 
 const char *
