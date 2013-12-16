@@ -41,7 +41,7 @@ Example::
 
     sub vcl_recv {
         if (req.url ~ "/backend_health") {
-          error 777 "OK";
+            error 777 "OK";
         }
     }                
     sub vcl_error {
