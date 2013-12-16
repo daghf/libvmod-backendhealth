@@ -29,8 +29,7 @@ json
 ----
 
 Prototype
-        ::
-                json(BOOL formatted)
+	json(BOOL formatted)
 Return value
 	STRING
 Description
@@ -38,43 +37,36 @@ Description
 	status". Parameter decides if you get neatly formatted JSON or
 	not, "true" or "false".
 
-Example
-        ::
-                sub vcl_recv {
-                    if (req.url ~ "/backend_health") {
-                        error 777 "OK";
-                    }
-                }
-                
-                sub vcl_error {
-                    if (obj.status == 777) {
-                        set obj.status = 200;
-                        
-                        # JSONP
-                        if (req.url ~ "\?callback=\w+") {
-                            set req.http.cb = regsub(req.url, ".*\?callback=(\w+).*", "\1");
-                            set obj.http.Content-Type = "application/javascript";
-                            synthetic req.http.cb + {"("} + backendhealth.json(false) + {")"};
-                        }
-                
-                        # JSON
-                        else {
-                            set obj.http.Content-Type = "application/json";
-                            synthetic backendhealth.json(true);
-                        }
-                        
-                        return (deliver);
-                    }
-                }
+Example::
+
+    sub vcl_recv {
+        if (req.url ~ "/backend_health") {
+          error 777 "OK";
+        }
+    }                
+    sub vcl_error {
+        if (obj.status == 777) {
+            set obj.status = 200;
+            
+	    # JSONP
+            if (req.url ~ "\?callback=\w+") {
+                set req.http.cb = regsub(req.url, ".*\?callback=(\w+).*", "\1");
+                set obj.http.Content-Type = "application/javascript";
+                synthetic req.http.cb + {"("} + backendhealth.json(false) + {")"};
+            }
+            
+            # JSON
+            else {
+                set obj.http.Content-Type = "application/json";
+                synthetic backendhealth.json(true);
+            }
+            return (deliver);
+        }
+    }
 
 
 INSTALLATION
 ============
-
-This is an backendhealth skeleton for developing out-of-tree Varnish
-vmods available from the 3.0 release. It implements the "Hello, World!" 
-as a vmod callback. Not particularly useful in good hello world 
-tradition,but demonstrates how to get the glue around a vmod working.
 
 The source tree is based on autotools to configure the building, and
 does also have the necessary bits in place to do functional unit tests
@@ -98,22 +90,9 @@ Make targets:
 * make install - installs your vmod in `VMODDIR`
 * make check - runs the unit tests in ``src/tests/*.vtc``
 
-In your VCL you could then use this vmod along the following lines::
-        
-        import backendhealth;
+In your VCL you could then use this vmod by extending it along the
+lines of the above example.
 
-        sub vcl_deliver {
-                # This sets resp.http.hello to "Hello, World"
-                set resp.http.hello = backendhealth.hello("World");
-        }
-
-HISTORY
-=======
-
-This manual page was released as part of the libvmod-backendhealth package,
-demonstrating how to create an out-of-tree Varnish vmod. For further
-backendhealths and inspiration check the vmod directory:
-https://www.varnish-cache.org/vmods
 
 COPYRIGHT
 =========
