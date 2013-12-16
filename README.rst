@@ -28,8 +28,10 @@ FUNCTIONS
 json
 ----
 
-Prototype
+Prototype::
+
 	json(BOOL formatted)
+
 Return value
 	STRING
 Description
