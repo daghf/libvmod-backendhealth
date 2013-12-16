@@ -30,38 +30,43 @@ json
 
 Prototype
         ::
-                json()
+                json(BOOL formatted)
 Return value
 	STRING
 Description
-	Returns a JSON object with tuples of "backend name": "health status".
+	Returns a JSON object with tuples of "backend name": "health
+	status". Parameter decides if you get neatly formatted JSON or
+	not, "true" or "false".
+
 Example
         ::
                 sub vcl_recv {
-                    if (req.url ~ "/backend_health" && client.ip ~ localhost) {
+                    if (req.url ~ "/backend_health") {
                         error 777 "OK";
                     }
                 }
+                
                 sub vcl_error {
                     if (obj.status == 777) {
                         set obj.status = 200;
-                
-                        # JSONP     
+                        
+                        # JSONP
                         if (req.url ~ "\?callback=\w+") {
                             set req.http.cb = regsub(req.url, ".*\?callback=(\w+).*", "\1");
                             set obj.http.Content-Type = "application/javascript";
-                            synthetic req.http.cb + {"("} + backendhealth.json() + {")"};
+                            synthetic req.http.cb + {"("} + backendhealth.json(false) + {")"};
                         }
                 
                         # JSON
                         else {
                             set obj.http.Content-Type = "application/json";
-                            synthetic backendhealth.json();
+                            synthetic backendhealth.json(true);
                         }
                         
                         return (deliver);
                     }
                 }
+
 
 INSTALLATION
 ============
