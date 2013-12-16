@@ -1,0 +1,54 @@
+varnishtest "Test backendhealth vmod 3"
+
+server s1 {
+       rxreq
+       txresp
+} -start
+
+server s2 {
+       rxreq
+       txresp
+} -start
+
+varnish v1 -vcl {
+	import backendhealth from "${vmod_topbuild}/src/.libs/libvmod_backendhealth.so";
+
+	backend s1 {
+		.host = "${s1_addr}"; .port = "${s1_port}";
+	}
+
+	backend s2 {
+		.host = "${s2_addr}"; .port = "${s2_port}";
+	}
+
+	backend s3 {
+		.host = "${s2_addr}"; .port = "${s2_port}";
+	}
+
+	director foo random {
+		{ .backend = s1; .weight = 1; }
+		{ .backend = s2; .weight = 1; }
+		{ .backend = s3; .weight = 1; }
+	}
+
+	sub vcl_recv {
+		set req.backend = foo;
+
+		error 200 "OK";
+	}
+
+	sub vcl_error {
+		synthetic backendhealth.json(false);
+		return (deliver);
+	}
+} -start
+
+varnish v1 -cliok "backend.set_health s2 sick"
+
+client c1 {
+	txreq -url "/"
+	rxresp
+	expect resp.bodylen == 51
+}
+
+client c1 -run

@@ -7,16 +7,20 @@ server s1 {
 
 varnish v1 -vcl+backend {
 	import backendhealth from "${vmod_topbuild}/src/.libs/libvmod_backendhealth.so";
+	sub vcl_recv {
+		error 200 "OK";
+	}
 
-	sub vcl_deliver {
-		set resp.http.hello = backendhealth.json();
+	sub vcl_error {
+		synthetic backendhealth.json(true);
+		return (deliver);
 	}
 } -start
 
 client c1 {
 	txreq -url "/"
 	rxresp
-	expect resp.http.hello == "Hello, World"
+	expect resp.bodylen == 24
 }
 
 client c1 -run
