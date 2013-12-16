@@ -26,27 +26,31 @@ wsstrncat(char *dest, const char *src, unsigned max_sz) {
 /* This lets us cat to a ws-allocated string and just abandon if we run
    out of space. */
 #define STRCAT(dst, src, max)						\
-	dst = wsstrncat(dst, src, max);					\
-	if (!dst) {							\
-		WS_Release(sp->wrk->ws, 0);				\
-		WSL(sp->wrk, SLT_Error, sp->fd,				\
-		    "Running out of workspace in vmod_backendhealth. "	\
-		    "Increase sess_workspace to fix this.");		\
-		return "";						\
-	}						
+	do {								\
+		dst = wsstrncat(dst, src, max);				\
+		if (!dst) {						\
+			WS_Release(sp->wrk->ws, 0);			\
+			WSL(sp->wrk, SLT_Error, sp->fd,			\
+			    "Running out of workspace in vmod_backendhealth. " \
+			    "Increase sess_workspace to fix this.");	\
+			return "";					\
+		}							\
+	} while(0)
 
 const char *
-vmod_json(struct sess *sp)
+vmod_json(struct sess *sp, unsigned formatted)
 {
 	char *p;
 	unsigned max_sz;
-	unsigned sz;
 	int i, first = 1;
 
 	max_sz = WS_Reserve(sp->wrk->ws, 0);
 	p = sp->wrk->ws->f;
 	*p = 0;
-	STRCAT(p, "{\n", max_sz);
+	STRCAT(p, "{", max_sz);
+	if (formatted) {
+		STRCAT(p, "\n", max_sz);
+	}
 		
 	for (i = 1; i < sp->vcl->ndirector; ++i) {
 		CHECK_OBJ_NOTNULL(sp->vcl->director[i], DIRECTOR_MAGIC);
@@ -54,20 +58,25 @@ vmod_json(struct sess *sp)
 			char buf[1024];
 			int j, healthy;
 
-			if (!first)
-				STRCAT(p, ",\n", max_sz);
+			if (!first) {
+				if (formatted) STRCAT(p, ",\n", max_sz);
+				else STRCAT(p, ", ", max_sz);
+			}
 			first = 0;
 			
 			healthy = VDI_Healthy(sp->vcl->director[i], sp);
-			j = snprintf(buf, sizeof buf, "    \"%s\": \"%s\"",
-			    sp->vcl->director[i]->vcl_name, healthy ? "healthy" : "sick");
+			j = snprintf(buf, sizeof buf, "%s\"%s\": \"%s\"",
+			    (formatted ? "    " : " "), sp->vcl->director[i]->vcl_name,
+			    healthy ? "healthy" : "sick");
 			assert(j >= 0);
 
 			STRCAT(p, buf, max_sz);
 		}
 	}
 
-	STRCAT(p, "\n}\n", max_sz);
+	if (formatted) STRCAT(p, "\n}\n", max_sz);
+	else STRCAT(p, "}", max_sz);
+	
 	
 	WS_Release(sp->wrk->ws, strlen(p));
 	return (p);
