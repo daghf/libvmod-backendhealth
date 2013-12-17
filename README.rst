@@ -20,7 +20,23 @@ DESCRIPTION
 ===========
 
 A vmod that lets you query your Varnish server for a JSON object with
-the health status of your backends.
+the health status of your backends. With the accompanied VCL code,
+visiting the URL /backend_health on the Varnish server will produce an
+application/json response of the following format::
+
+    {
+        "default": "healthy",
+        "b1": "sick",
+        "www": "healthy"
+    }
+
+The health status is determined from the same method as if you were to
+check req.backend.healthy for each specific backend in VCL.
+
+Please see the VCL in the example below (also provided in file
+example.vcl). JSONP is also supported, by providing an additional
+?callback=foo query string.
+
 
 FUNCTIONS
 =========
@@ -45,7 +61,8 @@ Example::
         if (req.url ~ "/backend_health") {
             error 777 "OK";
         }
-    }                
+    }
+                
     sub vcl_error {
         if (obj.status == 777) {
             set obj.status = 200;
@@ -62,6 +79,7 @@ Example::
                 set obj.http.Content-Type = "application/json";
                 synthetic backendhealth.json(true);
             }
+
             return (deliver);
         }
     }
